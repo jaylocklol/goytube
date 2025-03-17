@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GoyTube</title>
     <style>
-        /* Dark theme styling */
+        /* General Styling */
         body {
             margin: 0;
             padding: 0;
@@ -13,10 +13,10 @@
             color: #FFFFFF;
             font-family: Arial, sans-serif;
             text-align: center;
-            overflow: hidden;
             position: relative;
         }
-        /* Floating Stars of David */
+
+        /* Floating "✡︎" */
         #background {
             position: absolute;
             top: 0;
@@ -24,37 +24,60 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            z-index: -1;
         }
         .star {
             position: absolute;
-            width: 30px;
-            height: 30px;
-            background: url('star-of-david.png') no-repeat center center;
-            background-size: contain;
-            opacity: 0.8;
+            font-size: 20px;
+            color: #0000FF;
+            opacity: 0.5;
         }
+
         /* Header */
         header {
             background-color: #0000FF;
             padding: 15px;
             font-size: 24px;
             font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0, 0, 255, 0.3);
         }
-        /* Video grid */
+
+        /* Search Bar */
+        #search-container {
+            margin: 10px auto;
+            text-align: center;
+        }
+        #search {
+            width: 80%;
+            max-width: 300px;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #0000FF;
+            border-radius: 5px;
+            background-color: #111;
+            color: white;
+        }
+
+        /* Video Grid */
         #video-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            margin-top: 20px;
+            padding: 20px;
         }
         .video {
             margin: 10px;
-            width: 200px;
+            width: 90%;
+            max-width: 300px;
             cursor: pointer;
             border: 2px solid #0000FF;
             border-radius: 10px;
             padding: 10px;
             background-color: #111111;
+            transition: transform 0.2s ease-in-out;
+        }
+        .video:hover {
+            transform: scale(1.05);
         }
         .video img {
             width: 100%;
@@ -64,45 +87,60 @@
             font-size: 16px;
             color: #0000FF;
         }
+
+        /* Video Player */
+        #video-details {
+            padding: 20px;
+            display: none;
+        }
+        iframe {
+            width: 100%;
+            max-width: 560px;
+            height: 315px;
+        }
+
+        /* Mobile-Friendly */
+        @media (max-width: 600px) {
+            header {
+                font-size: 20px;
+                padding: 10px;
+            }
+            .video {
+                width: 100%;
+            }
+            iframe {
+                height: 200px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div id="background"></div> <!-- Stars of David Background -->
+    <div id="background"></div>
     <header>GoyTube</header>
+
+    <!-- Search Bar -->
+    <div id="search-container">
+        <input type="text" id="search" placeholder="Search videos...">
+    </div>
+
     <div id="video-container"></div>
-    <div id="video-details" style="display: none;"></div>
+    <div id="video-details"></div>
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Fetch video data
             fetch('data.json')
                 .then(response => response.json())
                 .then(data => {
                     const container = document.getElementById('video-container');
                     const details = document.getElementById('video-details');
-                    
-                    // Get video ID from URL if present
+                    const searchInput = document.getElementById('search');
+
                     const params = new URLSearchParams(window.location.search);
                     const videoID = params.get('id');
 
-                    if (videoID) {
-                        const video = data.find(v => v.VideoID == videoID);
-                        if (video) {
-                            details.innerHTML = `
-                                <h1>${video['Video Name']}</h1>
-                                <p>by ${video.Author}</p>
-                                <iframe width="560" height="315" src="${video['Video Link']}" frameborder="0" allowfullscreen></iframe>
-                                <p>${video.Description}</p>
-                                <br><a href="index.html" style="color:#0000FF;">Back to Gallery</a>
-                            `;
-                            details.style.display = "block";
-                            container.style.display = "none";
-                        } else {
-                            details.innerHTML = `<h2>Video Not Found</h2>`;
-                        }
-                    } else {
-                        // Show video gallery
-                        data.forEach(video => {
+                    function displayVideos(filteredData) {
+                        container.innerHTML = "";
+                        filteredData.forEach(video => {
                             const videoElement = document.createElement('div');
                             videoElement.classList.add('video');
                             videoElement.innerHTML = `
@@ -115,13 +153,43 @@
                             container.appendChild(videoElement);
                         });
                     }
+
+                    if (videoID) {
+                        const video = data.find(v => v.VideoID == videoID);
+                        if (video) {
+                            details.innerHTML = `
+                                <h1>${video['Video Name']}</h1>
+                                <p>by ${video.Author}</p>
+                                <iframe src="${video['Video Link']}" frameborder="0" allowfullscreen></iframe>
+                                <p>${video.Description}</p>
+                                <br><a href="index.html" style="color:#0000FF;">⬅ Back to Gallery</a>
+                            `;
+                            details.style.display = "block";
+                            container.style.display = "none";
+                        } else {
+                            details.innerHTML = `<h2>Video Not Found</h2>`;
+                        }
+                    } else {
+                        displayVideos(data);
+                    }
+
+                    // Search functionality
+                    searchInput.addEventListener("input", () => {
+                        const query = searchInput.value.toLowerCase();
+                        const filtered = data.filter(video =>
+                            video["Video Name"].toLowerCase().includes(query) ||
+                            video.Author.toLowerCase().includes(query)
+                        );
+                        displayVideos(filtered);
+                    });
                 });
 
-            // Generate floating Stars of David
+            // Generate Floating "✡︎" Symbols
             const background = document.getElementById('background');
             for (let i = 0; i < 20; i++) {
                 let star = document.createElement('div');
                 star.classList.add('star');
+                star.innerText = '✡︎';
                 star.style.left = Math.random() * window.innerWidth + "px";
                 star.style.top = Math.random() * window.innerHeight + "px";
                 star.style.animation = `float ${Math.random() * 5 + 3}s linear infinite`;
